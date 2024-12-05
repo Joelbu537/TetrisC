@@ -26,9 +26,10 @@ bool running = false;
 int mouseX;
 int mouseY;
 int targetFPS = 60;
-int score = 0;
-int playtime = 0;
+volatile int score = 0;
+volatile int playtime = 0;
 SDL_mutex* fieldMutex;
+SDL_mutex* timeMutex;
 
 RGBAColor hsv_to_rgb(HSVColor color) {
     // Normalisierung der Eingabewerte auf den Bereich 0-1
@@ -80,7 +81,30 @@ void SetBlock(int x, int y, HSVColor hsv) {
     field[x + y * 10].color = hsv;
     SDL_UnlockMutex(fieldMutex);
 }
-
+bool IsBlock(int x, int y) {
+    SDL_LockMutex(fieldMutex);
+    if (field[x + y * 10].block == true) {
+        SDL_UnlockMutex(fieldMutex);
+        return true;
+    }
+    SDL_UnlockMutex(fieldMutex);
+    return false;
+}
+void RemoveBlock(int x, int y) {
+    SDL_LockMutex(fieldMutex);
+    field[x + y * 10].block = false;
+    field[x + y * 10].color = (HSVColor){ 0, 0, 0 };
+    SDL_UnlockMutex(fieldMutex);
+}
+DWORD WINAPI IncrementTime(LPVOID lpParam) {
+    while (true) {
+        SDL_LockMutex(timeMutex);
+        playtime++;
+        SDL_UnlockMutex(timeMutex);
+        Sleep(1000);
+    }
+    return 0;
+}
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
@@ -192,19 +216,31 @@ int main() {
 
     //Game start
     fieldMutex = SDL_CreateMutex();
-
+    timeMutex = SDL_CreateMutex();
     SDL_LockMutex(fieldMutex);
     for (int i = 0; i < sizeof(field) / sizeof(field[0]); i++) {
         field[i].block = false;
         field[i].color = (HSVColor){ 0, 0, 0};
     }
-    field[0] = (TetrisField){ true, (HSVColor) { 0, 255, 204 } };
-    field[1] = (TetrisField){ true, (HSVColor) { 0, 255, 204 } };
-    field[9] = (TetrisField){ true, (HSVColor) { 0, 255, 204 } };
-    field[175] = (TetrisField){ true, (HSVColor) { 70, 255, 204 } };
-    field[179] = (TetrisField){ true, (HSVColor) { 120, 255, 204 } };
+    SetBlock(0, 0, (HSVColor) { 45, 255, 204 });
+    SetBlock(1, 0, (HSVColor) { 210, 255, 204 });
+    SetBlock(5, 2, (HSVColor) { 0, 255, 204 });
+    SetBlock(5, 3, (HSVColor) { 70, 255, 204 });
+    SetBlock(7, 8, (HSVColor) { 120, 255, 204 });
+    SetBlock(6, 1, (HSVColor) { 0, 255, 204 });
 
     SDL_UnlockMutex(fieldMutex);
+    HANDLE threadHandleTime;
+
+    // Erstelle den Thread
+    threadHandleTime = CreateThread(
+        NULL,               // Standard Sicherheitsattribute
+        0,                  // Standard Stackgröße
+        IncrementTime,   // Startadresse (Funktion des Threads)
+        NULL,               // Parameter für die Funktion
+        0,                  // Standard Flags
+        NULL                // Thread-ID (optional)
+    );
 
     QueryPerformanceCounter(&t1);
 
@@ -285,23 +321,26 @@ int main() {
                 SDL_UnlockMutex(fieldMutex);
             }
         }
+        //Stats rendern
         char stringScore[64];
         char stringTime[64];
-        sprintf_s(stringScore, sizeof(stringScore), "SCORE 10000%d", score);
-        sprintf_s(stringTime, sizeof(stringTime), "TIME 0", playtime);
+        SDL_LockMutex(timeMutex);
+        sprintf_s(stringScore, sizeof(stringScore), "SCORE %d", score);
+        SDL_UnlockMutex(timeMutex);
+        sprintf_s(stringTime, sizeof(stringTime), "TIME %d", playtime);
         SDL_Surface* SurfaceScore = TTF_RenderText_Solid(font, stringScore, textColor);
         SDL_Texture* TextureScore = SDL_CreateTextureFromSurface(renderer, SurfaceScore);
         int widthScore;
         int heightScore;
         TTF_SizeText(font, stringScore, &widthScore, &heightScore);
-        SDL_Rect textRect = { 0, 0, widthScore, heightScore };  // Position und Größe des Textes
+        SDL_Rect textRect = { 100, 0, widthScore, heightScore };  // Position und Größe des Textes
         SDL_RenderCopy(renderer, TextureScore, NULL, &textRect);
         SDL_Surface* textSurfaceTime = TTF_RenderText_Solid(font, stringTime, textColor);
         SDL_Texture* TextureTime = SDL_CreateTextureFromSurface(renderer, textSurfaceTime);
         int widthTime;
         int heightTime;
         TTF_SizeText(font, stringTime, &widthTime, &heightTime);
-        SDL_Rect timeRect = { 400, 0, widthTime, heightTime };
+        SDL_Rect timeRect = { 320, 0, widthTime, heightTime };
         SDL_RenderCopy(renderer, TextureTime, NULL, &timeRect);
 
         //Render präsentieren
@@ -315,6 +354,9 @@ int main() {
             frameDelta = (double)(t2.QuadPart - t1.QuadPart) / frequency.QuadPart;
         } while (frameDelta < targetFrameTime);
     }
+    TerminateThread(threadHandleTime, 0);
+    CloseHandle(threadHandleTime);
+    TTF_CloseFont(bigfont);
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
