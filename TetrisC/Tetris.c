@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <jlib.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 
 
 typedef struct {
@@ -106,11 +107,13 @@ DWORD WINAPI IncrementTime(LPVOID lpParam) {
     return 0;
 }
 int main() {
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
     SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 520, 925, NULL);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     char* basePath = SDL_GetBasePath();
+
+    //Font setup
     const char* fontFileName = "slkscr.ttf";
     char fullPath[512];
     snprintf(fullPath, sizeof(fullPath), "%s%s", basePath, fontFileName);
@@ -120,6 +123,34 @@ int main() {
         printf("TTF Error: %s", TTF_GetError());
         return -1;
     }
+
+    //Sound setup
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        printf("Fehler bei Mix_OpenAudio: %s\n", Mix_GetError());
+        SDL_Quit();
+        return -1;
+    }
+    char backgroundPath[512];
+    snprintf(backgroundPath, sizeof(backgroundPath), "%s%s", basePath, "Audio\\background1.mp3");
+    Mix_Music* backgroundMusic = Mix_LoadMUS(backgroundPath);
+    if (!backgroundMusic) {
+        printf("Fehler beim Laden der Hintergrundmusik: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        SDL_Quit();
+        return -1;
+    }
+    char sfxPath[512];
+    snprintf(sfxPath, sizeof(sfxPath), "%s%s", basePath, "Audio\\sfx1.mp3");
+    Mix_Chunk* soundEffect = Mix_LoadWAV(sfxPath);
+    if (!soundEffect) {
+        printf("Fehler beim Laden des Soundeffekts: %s\n", Mix_GetError());
+        Mix_FreeMusic(backgroundMusic);
+        Mix_CloseAudio();
+        SDL_Quit();
+        return -1;
+    }
+
+
     srand(time(NULL));
     SDL_Color textColor = { 255, 255, 255 };
 
@@ -156,6 +187,9 @@ int main() {
                 }
             }
             if (event.type == SDL_MOUSEBUTTONDOWN) {
+                if (Mix_PlayChannel(-1, soundEffect, 0) == -1) {
+                    printf("Fehler beim Abspielen des Soundeffekts: %s\n", Mix_GetError());
+                }
                 if (event.button.button == SDL_BUTTON_LEFT && hover) {
                     printf("Left mouse button clicked at (%d, %d)\n",
                         event.button.x, event.button.y);
@@ -225,14 +259,14 @@ int main() {
     SetBlock(0, 0, (HSVColor) { 45, 255, 204 });
     SetBlock(1, 0, (HSVColor) { 210, 255, 204 });
     SetBlock(5, 2, (HSVColor) { 0, 255, 204 });
-    SetBlock(5, 3, (HSVColor) { 70, 255, 204 });
+    SetBlock(5, 3, (HSVColor) { 0, 255, 204 }); //70 für Grün
     SetBlock(7, 8, (HSVColor) { 120, 255, 204 });
     SetBlock(6, 1, (HSVColor) { 0, 255, 204 });
-
+    SetBlock(6, 2, (HSVColor) { 0, 255, 204 });
     SDL_UnlockMutex(fieldMutex);
     HANDLE threadHandleTime;
 
-    // Erstelle den Thread
+    //Timer starten
     threadHandleTime = CreateThread(
         NULL,               // Standard Sicherheitsattribute
         0,                  // Standard Stackgröße
@@ -241,6 +275,11 @@ int main() {
         0,                  // Standard Flags
         NULL                // Thread-ID (optional)
     );
+
+    //Musik starten
+    if (Mix_PlayMusic(backgroundMusic, -1) == -1) {
+        printf("Fehler beim Abspielen der Hintergrundmusik: %s\n", Mix_GetError());
+    }
 
     QueryPerformanceCounter(&t1);
 
@@ -333,7 +372,7 @@ int main() {
         int widthScore;
         int heightScore;
         TTF_SizeText(font, stringScore, &widthScore, &heightScore);
-        SDL_Rect textRect = { 100, 0, widthScore, heightScore };  // Position und Größe des Textes
+        SDL_Rect textRect = { 75, 0, widthScore, heightScore };  // Position und Größe des Textes
         SDL_RenderCopy(renderer, TextureScore, NULL, &textRect);
         SDL_Surface* textSurfaceTime = TTF_RenderText_Solid(font, stringTime, textColor);
         SDL_Texture* TextureTime = SDL_CreateTextureFromSurface(renderer, textSurfaceTime);
@@ -355,6 +394,9 @@ int main() {
         } while (frameDelta < targetFrameTime);
     }
     TerminateThread(threadHandleTime, 0);
+    Mix_FreeChunk(soundEffect);
+    Mix_FreeMusic(backgroundMusic);
+    Mix_CloseAudio();
     CloseHandle(threadHandleTime);
     TTF_CloseFont(bigfont);
     TTF_CloseFont(font);
