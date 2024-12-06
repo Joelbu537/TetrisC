@@ -20,8 +20,13 @@ typedef struct {
     bool block;
     HSVColor color;
 }TetrisField;
+typedef struct {
+    TetrisField field;
+    int x, y;
+}TetrisFieldActive;
 
 TetrisField field[180];
+TetrisFieldActive activeField[4];
 
 bool running = false;
 int mouseX;
@@ -31,6 +36,9 @@ volatile int score = 0;
 volatile int playtime = 0;
 SDL_mutex* fieldMutex;
 SDL_mutex* timeMutex;
+SDL_mutex* activefieldMutex;
+volatile bool activefieldbool = false;
+volatile int stepDelay = 1000;
 
 RGBAColor hsv_to_rgb(HSVColor color) {
     // Normalisierung der Eingabewerte auf den Bereich 0-1
@@ -105,6 +113,42 @@ DWORD WINAPI IncrementTime(LPVOID lpParam) {
         Sleep(1000);
     }
     return 0;
+}
+bool IsRow(int y) {
+    SDL_LockMutex(fieldMutex);
+    int count = 0;
+    for (int i = y * 10; i < y * 10 + 10; i++) {
+        if (field[i].block) {
+            count++;
+        }
+    }
+    SDL_UnlockMutex(fieldMutex);
+    if (count == 10) {
+        return true;
+    }
+    return false;
+}
+DWORD WINAPI DropBlocks(LPVOID lpParam) {
+    while (true) {
+        SDL_LockMutex(activefieldMutex);
+        if (activefieldbool) {
+            bool dropIsPossible = true;
+            for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
+                if (activeField[i].field.block && IsBlock(activeField->x, activeField->y + 1)) {
+                    dropIsPossible = false;
+                }
+            }
+            if (dropIsPossible) {
+                for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
+                    if (activeField[i].field.block) {
+                        activeField[i].y = activeField[i].y + 1;
+                    }
+                }
+            }
+        }
+        SDL_UnlockMutex(activefieldMutex);
+        Sleep(stepDelay);
+    }
 }
 int main() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
@@ -251,6 +295,7 @@ int main() {
     //Game start
     fieldMutex = SDL_CreateMutex();
     timeMutex = SDL_CreateMutex();
+    activefieldMutex = SDL_CreateMutex();
     SDL_LockMutex(fieldMutex);
     for (int i = 0; i < sizeof(field) / sizeof(field[0]); i++) {
         field[i].block = false;
