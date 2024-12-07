@@ -8,6 +8,7 @@
 #include <jlib.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
+#include <time.h>
 
 
 typedef struct {
@@ -38,7 +39,10 @@ SDL_mutex* fieldMutex;
 SDL_mutex* timeMutex;
 SDL_mutex* activefieldMutex;
 volatile bool activefieldbool = false;
-volatile int stepDelay = 1000;
+volatile int stepDelay = 1200;
+
+
+HSVColor cyan = { 120, 255, 204 };
 
 RGBAColor hsv_to_rgb(HSVColor color) {
     // Normalisierung der Eingabewerte auf den Bereich 0-1
@@ -91,6 +95,9 @@ void SetBlock(int x, int y, HSVColor hsv) {
     SDL_UnlockMutex(fieldMutex);
 }
 bool IsBlock(int x, int y) {
+    if (x > 9 || y > 17) {
+        return true;
+    }
     SDL_LockMutex(fieldMutex);
     if (field[x + y * 10].block == true) {
         SDL_UnlockMutex(fieldMutex);
@@ -134,8 +141,12 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
         if (activefieldbool) {
             bool dropIsPossible = true;
             for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
-                if (activeField[i].field.block && IsBlock(activeField->x, activeField->y + 1)) {
+                if (activeField[i].field.block && IsBlock(activeField[i].x, activeField[i].y + 1)) {
+                    printf("Drop not possible: %d\n", i);
                     dropIsPossible = false;
+                }
+                else {
+                    printf("Drop possible: %d\n", i);
                 }
             }
             if (dropIsPossible) {
@@ -145,6 +156,45 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     }
                 }
             }
+            else {
+                for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
+                    SetBlock(activeField[i].x,activeField[i].y,activeField[i].field.color);
+                    activeField[i].field.block = false;
+                }
+                score += 5;
+                activefieldbool = false;
+            }
+        }
+        else {
+            switch (rand() % 2) // % 8
+            {
+            case 0:
+                
+                activeField[0].x = 5;
+                activeField[0].y = 0;
+                activeField[0].field.block = true;
+                activeField[0].field.color = cyan;
+                activeField[1].x = 5;
+                activeField[1].y = 1;
+                activeField[1].field.block = true;
+                activeField[1].field.color = cyan;
+                activeField[2].x = 5;
+                activeField[2].y = 2;
+                activeField[2].field.block = true;
+                activeField[2].field.color = cyan;
+                activeField[3].x = 5;
+                activeField[3].y = 3;
+                activeField[3].field.block = true;
+                activeField[3].field.color = cyan;
+                activefieldbool = true;
+                break;
+            case 1:
+                break;
+            case 2: 
+                break;
+            default:
+                break;
+            }
         }
         SDL_UnlockMutex(activefieldMutex);
         Sleep(stepDelay);
@@ -153,6 +203,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
 int main() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
+    srand((unsigned int)time(NULL));
     SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 520, 925, NULL);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     char* basePath = SDL_GetBasePath();
@@ -301,15 +352,11 @@ int main() {
         field[i].block = false;
         field[i].color = (HSVColor){ 0, 0, 0};
     }
-    SetBlock(0, 0, (HSVColor) { 45, 255, 204 });
-    SetBlock(1, 0, (HSVColor) { 210, 255, 204 });
-    SetBlock(5, 2, (HSVColor) { 0, 255, 204 });
-    SetBlock(5, 3, (HSVColor) { 0, 255, 204 }); //70 für Grün
-    SetBlock(7, 8, (HSVColor) { 120, 255, 204 });
-    SetBlock(6, 1, (HSVColor) { 0, 255, 204 });
-    SetBlock(6, 2, (HSVColor) { 0, 255, 204 });
+    // COLOR, 255, 204
+    // 0 Rot  70 Grün  45 Gelb  210 Pink  120 Cyan
     SDL_UnlockMutex(fieldMutex);
     HANDLE threadHandleTime;
+    HANDLE threadDrop;
 
     //Timer starten
     threadHandleTime = CreateThread(
@@ -319,6 +366,14 @@ int main() {
         NULL,               // Parameter für die Funktion
         0,                  // Standard Flags
         NULL                // Thread-ID (optional)
+    );
+    threadDrop = CreateThread(
+        NULL,
+        0,
+        DropBlocks,
+        NULL,
+        0,
+        NULL
     );
 
     //Musik starten
@@ -405,6 +460,35 @@ int main() {
                 SDL_UnlockMutex(fieldMutex);
             }
         }
+        SDL_LockMutex(activefieldMutex);
+        for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
+            if (activeField[i].field.block) {
+                SDL_Rect baseRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 50 };
+                HSVColor hsv = activeField[i].field.color;
+                RGBAColor color = hsv_to_rgb(hsv);
+                SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+                SDL_RenderFillRect(renderer, &baseRect);
+                SDL_Rect leftRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 5, 50 };
+                hsv.v = hsv.v - 26;
+                hsv.s = hsv.s - 100;
+                color = hsv_to_rgb(hsv);
+                SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+                SDL_RenderFillRect(renderer, &leftRect);
+                SDL_Rect upRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 5 };
+                hsv.v = hsv.v + 50;
+                hsv.s = hsv.s - 79;
+                color = hsv_to_rgb(hsv);
+                SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+                SDL_RenderFillRect(renderer, &upRect);
+                SDL_Rect cornerRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 5, 5 };
+                hsv = activeField[i].field.color;
+                hsv.v = hsv.v - 100;
+                color = hsv_to_rgb(hsv);
+                SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+                SDL_RenderFillRect(renderer, &cornerRect);
+            }
+        }
+        SDL_UnlockMutex(activefieldMutex);
         //Stats rendern
         char stringScore[64];
         char stringTime[64];
