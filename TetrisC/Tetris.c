@@ -37,7 +37,7 @@ SDL_mutex* fieldMutex;
 SDL_mutex* timeMutex;
 SDL_mutex* activefieldMutex;
 volatile bool activefieldbool = false;
-volatile int stepDelay = 250;
+volatile int stepDelay = 500;
 volatile bool blockout = false;
 bool firstBlockout = true;
 
@@ -116,6 +116,12 @@ void RemoveBlock(int x, int y) {
     SDL_LockMutex(fieldMutex);
     field[x + y * 10].block = false;
     field[x + y * 10].color = (HSVColor){ 0, 0, 0 };
+    SDL_UnlockMutex(fieldMutex);
+}
+void LowerBlock(int x, int y) {
+    SDL_LockMutex(fieldMutex);
+    field[x, y + 1] = field[x, y];
+    RemoveBlock(x, y);
     SDL_UnlockMutex(fieldMutex);
 }
 DWORD WINAPI IncrementTime(LPVOID lpParam) {
@@ -629,12 +635,44 @@ int main() {
         //Bildschirm leeren
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
-
+        //Lines suchen
+        if (!activefieldbool) {
+            SDL_LockMutex(fieldMutex);
+            int combo = 0;
+            for (int i = 0; i < 18; i++) {
+                bool full = true;
+                for (int x = 0; x < 10; x++) {
+                    if (!IsBlock(x, i)) {
+                        full = false;
+                    }
+                }
+                if (full) {
+                    combo++;
+                    score += 40;
+                    if (Mix_PlayChannel(-1, soundEffect, 0) == -1) {
+                        printf("Fehler beim Abspielen des Soundeffekts: %s\n", Mix_GetError());
+                    }
+                    for (int y = i - 1; y > -1; y--) {
+                        for (int x = 0; x < 10; x++) {
+                            LowerBlock(x, y);
+                        }
+                    }
+                    i--;
+                }
+                else {
+                    full = true;
+                }
+            }
+            if (combo > 1) {
+                score += combo * 30 - 30;
+            }
+            SDL_UnlockMutex(fieldMutex);
+        }
         //Rendern
-        SDL_LockMutex(fieldMutex);
         for (int i = 0; i < 18; i++) {       //Y
             for (int j = 0; j < 10; j++) {   //X
                 int id = i * 10 + j;
+                SDL_LockMutex(fieldMutex);
                 if (field[id].block) {
                     SDL_Rect baseRect = { j * 50 + 10, i * 50 + 25, 50, 50 };
                     HSVColor hsv = field[id].color;
@@ -660,8 +698,10 @@ int main() {
                     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL_RenderFillRect(renderer, &cornerRect);
                 }
+                SDL_UnlockMutex(fieldMutex);
             }
         }
+        SDL_LockMutex(activefieldMutex);
         for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
             if (activeField[i].field.block) {
                 SDL_Rect baseRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 50 };
