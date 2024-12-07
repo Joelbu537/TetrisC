@@ -8,8 +8,6 @@
 #include <jlib.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
-#include <time.h>
-
 
 typedef struct {
     int r, g, b, a;
@@ -50,6 +48,7 @@ HSVColor blue = { 140, 255, 204 };
 HSVColor orange = { 25, 255, 204 };
 HSVColor red = { 0, 255, 204 };
 HSVColor green = { 80, 255, 204 };
+HSVColor purple = { 220, 255, 204 };
 
 RGBAColor hsv_to_rgb(HSVColor color) {
     // Normalisierung der Eingabewerte auf den Bereich 0-1
@@ -142,6 +141,49 @@ bool IsRow(int y) {
     }
     return false;
 }
+void RotateActive(int direction) { //0 down 1 left 2 right
+    if (activefieldbool) {
+        bool possible = true;
+        switch (direction) {
+        case 0:
+            SDL_LockMutex(fieldMutex);
+            for (int i = 0; i < 4; i++) {
+                if (activeField[i].y + 1 >= 18 || IsBlock(activeField[i].x, activeField[i].y + 1)) possible = false;
+            }
+            if (possible){
+                for (int i = 0; i < 4; i++) {
+                    activeField[i].y++;
+                }
+            }
+            SDL_UnlockMutex(fieldMutex);
+            break;
+        case 1:
+            SDL_LockMutex(fieldMutex);
+            for (int i = 0; i < 4; i++) {
+                if (activeField[i].x -1 < 0 || IsBlock(activeField[i].x - 1, activeField[i].y)) possible = false;
+            }
+            if (possible) {
+                for (int i = 0; i < 4; i++) {
+                    activeField[i].x--;
+                }
+            }
+            SDL_UnlockMutex(fieldMutex);
+            break;
+        case 2:
+            SDL_LockMutex(fieldMutex);
+            for (int i = 0; i < 4; i++) {
+                if (activeField[i].x + 1 > 17 || IsBlock(activeField[i].x + 1, activeField[i].y)) possible = false;
+            }
+            if (possible) {
+                for (int i = 0; i < 4; i++) {
+                    activeField[i].x++;
+                }
+            }
+            SDL_UnlockMutex(fieldMutex);
+            break;
+        }
+    }
+}
 DWORD WINAPI DropBlocks(LPVOID lpParam) {
     srand((unsigned int)clock());
     while (true) {
@@ -152,9 +194,6 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                 if (activeField[i].field.block && IsBlock(activeField[i].x, activeField[i].y + 1)) {
                     printf("Drop not possible: %d\n", i);
                     dropIsPossible = false;
-                }
-                else {
-                    printf("Drop possible: %d\n", i);
                 }
             }
             if (dropIsPossible) {
@@ -314,6 +353,30 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].y = 2;
                     activeField[3].field.block = true;
                     activeField[3].field.color = green;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
+                break;
+            case 6:
+                if (!IsBlock(5, 0) && !IsBlock(4, 1) && !IsBlock(5, 1) && !IsBlock(6, 1)) {
+                    activeField[0].x = 5;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = purple;
+                    activeField[1].x = 4;
+                    activeField[1].y = 1;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = purple;;
+                    activeField[2].x = 5;
+                    activeField[2].y = 1;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = purple;
+                    activeField[3].x = 6;
+                    activeField[3].y = 1;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = purple;
                     activefieldbool = true;
                 }
                 else {
@@ -497,12 +560,12 @@ int main() {
 
     //Timer starten
     threadHandleTime = CreateThread(
-        NULL,               // Standard Sicherheitsattribute
-        0,                  // Standard Stackgröße
-        IncrementTime,   // Startadresse (Funktion des Threads)
-        NULL,               // Parameter für die Funktion
-        0,                  // Standard Flags
-        NULL                // Thread-ID (optional)
+        NULL,
+        0,              //Stackgröße
+        IncrementTime,  //Adresse
+        NULL,           //Parameter
+        0,              //Flags
+        NULL            //ID
     );
     threadDrop = CreateThread(
         NULL,
@@ -541,22 +604,25 @@ int main() {
                     //Pause-Menü
                     break;
                 }
+                if (event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) {
+                    printf("Down!\n");
+                    RotateActive(0);
+                }
+                if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) {
+                    printf("Left!\n");
+                    RotateActive(1);
+                }
+                if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_d) {
+                    printf("Right!");
+                    RotateActive(2);
+                }
             }
         }
 
         /*
         // Input handling
-        if (keyboardState[SDL_SCANCODE_W]) characterY -= characterSpeed * delta;
-        if (keyboardState[SDL_SCANCODE_S]) characterY += characterSpeed * delta;
-        if (keyboardState[SDL_SCANCODE_A]) characterX -= characterSpeed * delta;
-        if (keyboardState[SDL_SCANCODE_D]) characterX += characterSpeed * delta;
-        if (mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT) & !leftMouseHold) {
-        }
-        else if (mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT) & leftMouseHold) {
-
-        }
-        else {
-            leftMouseHold = false;
+        if (keyboardState[SDL_SCANCODE_W]) {
+            characterY -= characterSpeed * delta;
         }
         */
          
@@ -565,10 +631,10 @@ int main() {
         SDL_RenderClear(renderer);
 
         //Rendern
+        SDL_LockMutex(fieldMutex);
         for (int i = 0; i < 18; i++) {       //Y
             for (int j = 0; j < 10; j++) {   //X
                 int id = i * 10 + j;
-                SDL_LockMutex(fieldMutex);
                 if (field[id].block) {
                     SDL_Rect baseRect = { j * 50 + 10, i * 50 + 25, 50, 50 };
                     HSVColor hsv = field[id].color;
@@ -594,10 +660,8 @@ int main() {
                     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL_RenderFillRect(renderer, &cornerRect);
                 }
-                SDL_UnlockMutex(fieldMutex);
             }
         }
-        SDL_LockMutex(activefieldMutex);
         for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
             if (activeField[i].field.block) {
                 SDL_Rect baseRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 50 };
