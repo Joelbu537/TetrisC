@@ -39,10 +39,17 @@ SDL_mutex* fieldMutex;
 SDL_mutex* timeMutex;
 SDL_mutex* activefieldMutex;
 volatile bool activefieldbool = false;
-volatile int stepDelay = 1200;
+volatile int stepDelay = 250;
+volatile bool blockout = false;
+bool firstBlockout = true;
 
 
-HSVColor cyan = { 120, 255, 204 };
+HSVColor cyan = { 115, 255, 204 };
+HSVColor yellow = { 40, 255, 204 };
+HSVColor blue = { 140, 255, 204 };
+HSVColor orange = { 25, 255, 204 };
+HSVColor red = { 0, 255, 204 };
+HSVColor green = { 80, 255, 204 };
 
 RGBAColor hsv_to_rgb(HSVColor color) {
     // Normalisierung der Eingabewerte auf den Bereich 0-1
@@ -136,6 +143,7 @@ bool IsRow(int y) {
     return false;
 }
 DWORD WINAPI DropBlocks(LPVOID lpParam) {
+    srand((unsigned int)clock());
     while (true) {
         SDL_LockMutex(activefieldMutex);
         if (activefieldbool) {
@@ -166,31 +174,151 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             }
         }
         else {
-            switch (rand() % 2) // % 8
+            switch (rand() % 8)
             {
             case 0:
-                
-                activeField[0].x = 5;
-                activeField[0].y = 0;
-                activeField[0].field.block = true;
-                activeField[0].field.color = cyan;
-                activeField[1].x = 5;
-                activeField[1].y = 1;
-                activeField[1].field.block = true;
-                activeField[1].field.color = cyan;
-                activeField[2].x = 5;
-                activeField[2].y = 2;
-                activeField[2].field.block = true;
-                activeField[2].field.color = cyan;
-                activeField[3].x = 5;
-                activeField[3].y = 3;
-                activeField[3].field.block = true;
-                activeField[3].field.color = cyan;
-                activefieldbool = true;
+                if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(5, 2) && !IsBlock(5, 3)) {
+                    activeField[0].x = 5;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = cyan;
+                    activeField[1].x = 5;
+                    activeField[1].y = 1;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = cyan;
+                    activeField[2].x = 5;
+                    activeField[2].y = 2;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = cyan;
+                    activeField[3].x = 5;
+                    activeField[3].y = 3;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = cyan;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
                 break;
             case 1:
+                if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 0) && !IsBlock(6, 1)) {
+                    activeField[0].x = 5;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = yellow;
+                    activeField[1].x = 5;
+                    activeField[1].y = 1;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = yellow;
+                    activeField[2].x = 6;
+                    activeField[2].y = 0;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = yellow;
+                    activeField[3].x = 6;
+                    activeField[3].y = 1;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = yellow;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
                 break;
             case 2: 
+                if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(6, 1)) {
+                    activeField[0].x = 4;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = blue;
+                    activeField[1].x = 5;
+                    activeField[1].y = 0;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = blue;
+                    activeField[2].x = 6;
+                    activeField[2].y = 0;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = blue;
+                    activeField[3].x = 6;
+                    activeField[3].y = 1;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = blue;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
+                break;
+            case 3:
+                if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(4, 1)) {
+                    activeField[0].x = 4;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = orange;
+                    activeField[1].x = 5;
+                    activeField[1].y = 0;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = orange;
+                    activeField[2].x = 6;
+                    activeField[2].y = 0;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = orange;
+                    activeField[3].x = 4;
+                    activeField[3].y = 1;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = orange;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
+                break;
+            case 4:
+                if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 1) && !IsBlock(6, 2)) {
+                    activeField[0].x = 4;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = red;
+                    activeField[1].x = 4;
+                    activeField[1].y = 1;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = red;
+                    activeField[2].x = 5;
+                    activeField[2].y = 1;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = red;
+                    activeField[3].x = 5;
+                    activeField[3].y = 2;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = red;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
+                break;
+            case 5:
+                if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 1) && !IsBlock(6, 2)) {
+                    activeField[0].x = 5;
+                    activeField[0].y = 0;
+                    activeField[0].field.block = true;
+                    activeField[0].field.color = green;
+                    activeField[1].x = 5;
+                    activeField[1].y = 1;
+                    activeField[1].field.block = true;
+                    activeField[1].field.color = green;;
+                    activeField[2].x = 4;
+                    activeField[2].y = 1;
+                    activeField[2].field.block = true;
+                    activeField[2].field.color = green;
+                    activeField[3].x = 4;
+                    activeField[3].y = 2;
+                    activeField[3].field.block = true;
+                    activeField[3].field.color = green;
+                    activefieldbool = true;
+                }
+                else {
+                    blockout = true;
+                }
                 break;
             default:
                 break;
@@ -203,7 +331,6 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
 int main() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
-    srand((unsigned int)time(NULL));
     SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 520, 925, NULL);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     char* basePath = SDL_GetBasePath();
@@ -214,7 +341,8 @@ int main() {
     snprintf(fullPath, sizeof(fullPath), "%s%s", basePath, fontFileName);
     TTF_Font* font = TTF_OpenFont(fullPath, 26);  // Pfad zur Schriftart, Schriftgröße
     TTF_Font* bigfont = TTF_OpenFont(fullPath, 80);
-    if (font == NULL) {
+    TTF_Font* verybigfont = TTF_OpenFont(fullPath, 90);
+    if (font == NULL || bigfont == NULL || verybigfont == NULL) {
         printf("TTF Error: %s", TTF_GetError());
         return -1;
     }
@@ -230,6 +358,15 @@ int main() {
     Mix_Music* backgroundMusic = Mix_LoadMUS(backgroundPath);
     if (!backgroundMusic) {
         printf("Fehler beim Laden der Hintergrundmusik: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        SDL_Quit();
+        return -1;
+    }
+    char gameoverPath[512];
+    snprintf(gameoverPath, sizeof(gameoverPath), "%s%s", basePath, "Audio\\gameover.mp3");
+    Mix_Music* gameoverMusic = Mix_LoadMUS(gameoverPath);
+    if (!gameoverMusic) {
+        printf("Fehler beim Laden der GameOvermusik: %s\n", Mix_GetError());
         Mix_CloseAudio();
         SDL_Quit();
         return -1;
@@ -298,7 +435,7 @@ int main() {
         SDL_RenderClear(renderer);
 
 
-        //Title
+        //Menu
         SDL_Surface* TitleSurface = TTF_RenderText_Solid(font, "TETRIS", textColor);
         SDL_Texture* TitleTexture = SDL_CreateTextureFromSurface(renderer, TitleSurface);
         int widthScore;
@@ -510,6 +647,29 @@ int main() {
         TTF_SizeText(font, stringTime, &widthTime, &heightTime);
         SDL_Rect timeRect = { 320, 0, widthTime, heightTime };
         SDL_RenderCopy(renderer, TextureTime, NULL, &timeRect);
+
+        if (blockout && firstBlockout) {
+            TerminateThread(threadHandleTime, 0);
+            TerminateThread(threadDrop, 0);
+            activefieldbool = false;
+            Mix_HaltMusic();
+            firstBlockout = false;
+            if (Mix_PlayMusic(gameoverMusic, -1) == -1) {
+                printf("Fehler beim Abspielen der Gameovermusik: %s\n", Mix_GetError());
+            }
+        }
+        if (blockout) {
+            SDL_Surface* SurfaceBlockout = TTF_RenderText_Solid(bigfont, "BLOCKOUT", (SDL_Color) {255, 0, 0, 255});
+            SDL_Texture* TextureBlockout = SDL_CreateTextureFromSurface(renderer, SurfaceBlockout);
+            int widthBlockout;
+            int heightBlockout;
+            TTF_SizeText(verybigfont, "BLOCKOUT", &widthBlockout, &heightBlockout);
+            SDL_Rect backgroundRect = { 0, 350, 520, 85 };
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderFillRect(renderer, &backgroundRect);
+            SDL_Rect textRect = { 10, 350, widthBlockout, heightBlockout };  // Position und Größe des Textes
+            SDL_RenderCopy(renderer, TextureBlockout, NULL, &textRect);
+        }
 
         //Render präsentieren
         SDL_RenderPresent(renderer);
