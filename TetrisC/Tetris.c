@@ -120,7 +120,7 @@ void RemoveBlock(int x, int y) {
 }
 void LowerBlock(int x, int y) {
     SDL_LockMutex(fieldMutex);
-    field[x, y + 1] = field[x, y];
+    field[x + (y + 1) * 10] = field[x + y * 10];
     RemoveBlock(x, y);
     SDL_UnlockMutex(fieldMutex);
 }
@@ -219,9 +219,9 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             }
         }
         else {
-            switch (rand() % 8)
+            switch (rand() % 7) // 0 - 6
             {
-            case 0:
+            case 0: // I
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(5, 2) && !IsBlock(5, 3)) {
                     activeField[0].x = 5;
                     activeField[0].y = 0;
@@ -245,7 +245,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 1:
+            case 1: // Block
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 0) && !IsBlock(6, 1)) {
                     activeField[0].x = 5;
                     activeField[0].y = 0;
@@ -269,7 +269,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 2: 
+            case 2: // L
                 if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(6, 1)) {
                     activeField[0].x = 4;
                     activeField[0].y = 0;
@@ -293,7 +293,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 3:
+            case 3: // Reversed L
                 if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(4, 1)) {
                     activeField[0].x = 4;
                     activeField[0].y = 0;
@@ -317,7 +317,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 4:
+            case 4: // Thing facing right isde
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 1) && !IsBlock(6, 2)) {
                     activeField[0].x = 4;
                     activeField[0].y = 0;
@@ -341,7 +341,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 5:
+            case 5: //Thing facing left side
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(6, 1) && !IsBlock(6, 2)) {
                     activeField[0].x = 5;
                     activeField[0].y = 0;
@@ -365,7 +365,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     blockout = true;
                 }
                 break;
-            case 6:
+            case 6: // T
                 if (!IsBlock(5, 0) && !IsBlock(4, 1) && !IsBlock(5, 1) && !IsBlock(6, 1)) {
                     activeField[0].x = 5;
                     activeField[0].y = 0;
@@ -635,6 +635,7 @@ int main() {
         //Bildschirm leeren
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
+
         //Lines suchen
         if (!activefieldbool) {
             SDL_LockMutex(fieldMutex);
@@ -648,21 +649,22 @@ int main() {
                 }
                 if (full) {
                     combo++;
-                    score += 40;
                     if (Mix_PlayChannel(-1, soundEffect, 0) == -1) {
                         printf("Fehler beim Abspielen des Soundeffekts: %s\n", Mix_GetError());
                     }
-                    for (int y = i - 1; y > -1; y--) {
+                    for (int x = 0; x < 10; x++) {
+                        RemoveBlock(x, i);
+                    }
+                    score += 40;
+                    for (int y = i - 1; y >= 0; y--) {
                         for (int x = 0; x < 10; x++) {
                             LowerBlock(x, y);
                         }
                     }
                     i--;
                 }
-                else {
-                    full = true;
-                }
             }
+
             if (combo > 1) {
                 score += combo * 30 - 30;
             }
