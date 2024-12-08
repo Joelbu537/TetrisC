@@ -40,7 +40,8 @@ volatile bool activefieldbool = false;
 volatile int stepDelay = 500;
 volatile bool blockout = false;
 bool firstBlockout = true;
-
+volatile int blockType;
+volatile int rotationState;
 
 HSVColor cyan = { 115, 255, 204 };
 HSVColor yellow = { 40, 255, 204 };
@@ -147,7 +148,7 @@ bool IsRow(int y) {
     }
     return false;
 }
-void RotateActive(int direction) { //0 down 1 left 2 right
+void MoveActive(int direction) { //0 down 1 left 2 right
     if (activefieldbool) {
         bool possible = true;
         switch (direction) {
@@ -190,6 +191,113 @@ void RotateActive(int direction) { //0 down 1 left 2 right
         }
     }
 }
+void RotateActive() {
+    switch (blockType) {
+    case 0:
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y - 2) && !IsBlock(activeField[1].x, activeField[1].y + 1) && !IsBlock(activeField[2].x + 1, activeField[2].y) && !IsBlock(activeField[3].x + 2, activeField[3].y - 1)) {
+                activeField[0].x -= 1;
+                activeField[0].y += 2;
+                activeField[1].y += 1;
+                activeField[2].x += 1;
+                activeField[3].x += 2;
+                activeField[3].y -= 1;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y + 2) && !IsBlock(activeField[1].x, activeField[1].y - 1) && !IsBlock(activeField[2].x - 1, activeField[2].y) && !IsBlock(activeField[3].x - 2, activeField[3].y + 1)) {
+                activeField[0].x += 1;
+                activeField[0].y -= 2;
+                activeField[1].y -= 1;
+                activeField[2].x -= 1;
+                activeField[3].x -= 2;
+                activeField[3].y += 1;
+                rotationState = 0;
+            }
+            break;
+        }
+        break;
+    case 1: //Block, do nothing
+        break;
+    case 2://l reverse
+        break;
+    case 3://L
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y - 1) && !IsBlock(activeField[2].x, activeField[2].y + 1) && !IsBlock(activeField[3].x + 1, activeField[3].y)) {
+                activeField[0].x += 1; activeField[0].y -= 1;
+                activeField[2].y += 1;
+                activeField[3].x += 1;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y + 1) && !IsBlock(activeField[2].x, activeField[2].y - 1) && !IsBlock(activeField[3].x + 1, activeField[3].y - 2)) {
+                activeField[0].x -= 1; activeField[0].y += 1;
+                activeField[2].y -= 1;
+                activeField[3].x += 1; activeField[3].y -= 2;
+                rotationState = 2;
+            }
+            break;
+        case 2:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y + 1) && !IsBlock(activeField[2].x - 1, activeField[2].y - 1) && !IsBlock(activeField[3].x - 1, activeField[3].y)) {
+                activeField[0].x += 1; activeField[0].y += 1;
+                activeField[2].x -= 1; activeField[2].y -= 1;
+                activeField[3].x -= 2;
+                rotationState = 3;
+            }
+            break;
+        case 3:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y - 1) && !IsBlock(activeField[2].x + 1, activeField[2].y + 1) && !IsBlock(activeField[3].x, activeField[3].y + 2)) {
+                activeField[0].x -= 1; activeField[0].y -= 1;
+                activeField[2].x += 1; activeField[2].y += 1;
+                activeField[3].y += 2;
+                rotationState = 0;
+            }
+            break;
+        }
+        break;
+    case 4://Thing
+        break;
+    case 5://Thing reverse
+        break;
+    case 6://T
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[3].x - 1, activeField[3].y + 1)) {
+                activeField[3].x -= 1;
+                activeField[3].y += 1;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y + 1)) {
+                activeField[0].x += 1;
+                activeField[0].y += 1;
+                rotationState = 2;
+            }
+            break;
+        case 2:
+            if (!IsBlock(activeField[1].x + 1, activeField[1].y - 1)) {
+                activeField[1].x += 1;
+                activeField[1].y -= 1;
+                rotationState = 3;
+            }
+            break;
+        case 3:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y - 1) && !IsBlock(activeField[1].x - 1, activeField[1].y + 1) && !IsBlock(activeField[3].x + 1, activeField[3].y + 1)) {
+                activeField[0].x -= 1; activeField[0].y -= 1;
+                activeField[1].x -= 1; activeField[1].y += 1;
+                activeField[3].x += 1; activeField[3].y -= 1;
+                rotationState = 0;
+            }
+            break;
+        }
+        break;
+    }
+}
 DWORD WINAPI DropBlocks(LPVOID lpParam) {
     srand((unsigned int)clock());
     while (true) {
@@ -219,7 +327,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             }
         }
         else {
-            switch (rand() % 7) // 0 - 6
+            switch(rand() % 7) // 0 - 6
             {
             case 0: // I
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(5, 2) && !IsBlock(5, 3)) {
@@ -240,6 +348,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = cyan;
                     activefieldbool = true;
+                    blockType = 0;
                 }
                 else {
                     blockout = true;
@@ -264,12 +373,13 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = yellow;
                     activefieldbool = true;
+                    blockType = 1;
                 }
                 else {
                     blockout = true;
                 }
                 break;
-            case 2: // L
+            case 2: // L Reversed
                 if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(6, 1)) {
                     activeField[0].x = 4;
                     activeField[0].y = 0;
@@ -288,12 +398,13 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = blue;
                     activefieldbool = true;
+                    blockType = 2;
                 }
                 else {
                     blockout = true;
                 }
                 break;
-            case 3: // Reversed L
+            case 3: // L
                 if (!IsBlock(4, 0) && !IsBlock(5, 0) && !IsBlock(6, 0) && !IsBlock(4, 1)) {
                     activeField[0].x = 4;
                     activeField[0].y = 0;
@@ -312,6 +423,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = orange;
                     activefieldbool = true;
+                    blockType = 3;
                 }
                 else {
                     blockout = true;
@@ -336,6 +448,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = red;
                     activefieldbool = true;
+                    blockType = 4;
                 }
                 else {
                     blockout = true;
@@ -360,6 +473,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = green;
                     activefieldbool = true;
+                    blockType = 5;
                 }
                 else {
                     blockout = true;
@@ -384,6 +498,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[3].field.block = true;
                     activeField[3].field.color = purple;
                     activefieldbool = true;
+                    blockType = 6;
                 }
                 else {
                     blockout = true;
@@ -392,6 +507,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             default:
                 break;
             }
+            rotationState = 0;
         }
         SDL_UnlockMutex(activefieldMutex);
         Sleep(stepDelay);
@@ -612,15 +728,18 @@ int main() {
                 }
                 if (event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) {
                     printf("Down!\n");
-                    RotateActive(0);
+                    MoveActive(0);
                 }
                 if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) {
                     printf("Left!\n");
-                    RotateActive(1);
+                    MoveActive(1);
                 }
                 if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_d) {
                     printf("Right!");
-                    RotateActive(2);
+                    MoveActive(2);
+                }
+                if ((event.key.keysym.sym == SDLK_r || event.key.keysym.sym == SDLK_SPACE) && activefieldbool) {
+                    RotateActive();
                 }
             }
         }
