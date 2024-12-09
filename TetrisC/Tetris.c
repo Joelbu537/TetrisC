@@ -24,7 +24,7 @@ typedef struct {
     int x, y;
 }TetrisFieldActive;
 
-TetrisField field[180];
+TetrisField field[200];
 TetrisFieldActive activeField[4];
 
 bool running = false;
@@ -42,6 +42,8 @@ volatile bool blockout = false;
 bool firstBlockout = true;
 volatile int blockType;
 volatile int rotationState;
+volatile int blocksDropped = 0;
+volatile int linesCleared = 0;
 
 HSVColor cyan = { 115, 255, 204 };
 HSVColor yellow = { 40, 255, 204 };
@@ -102,7 +104,7 @@ void SetBlock(int x, int y, HSVColor hsv) {
     SDL_UnlockMutex(fieldMutex);
 }
 bool IsBlock(int x, int y) {
-    if (x > 9 || y > 17) {
+    if (x >= 10 || y >= 20) {
         return true;
     }
     SDL_LockMutex(fieldMutex);
@@ -323,6 +325,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
                     activeField[i].field.block = false;
                 }
                 score += 5;
+                blocksDropped++;
                 activefieldbool = false;
             }
         }
@@ -516,7 +519,9 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
 int main() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
-    SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 520, 925, NULL);
+    int blocksize = 40;
+    printf("Window size: %d|%d\n", 20 + blocksize * 10, blocksize * 18 + 25);
+    SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 20 + blocksize * 10, 25 + 20 * blocksize, NULL);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     char* basePath = SDL_GetBasePath();
 
@@ -524,9 +529,9 @@ int main() {
     const char* fontFileName = "slkscr.ttf";
     char fullPath[512];
     snprintf(fullPath, sizeof(fullPath), "%s%s", basePath, fontFileName);
-    TTF_Font* font = TTF_OpenFont(fullPath, 26);  // Pfad zur Schriftart, Schriftgröße
-    TTF_Font* bigfont = TTF_OpenFont(fullPath, 80);
-    TTF_Font* verybigfont = TTF_OpenFont(fullPath, 90);
+    TTF_Font* font = TTF_OpenFont(fullPath, 24);  // Pfad zur Schriftart, Schriftgröße
+    TTF_Font* bigfont = TTF_OpenFont(fullPath, 60);
+    TTF_Font* verybigfont = TTF_OpenFont(fullPath, 80);
     if (font == NULL || bigfont == NULL || verybigfont == NULL) {
         printf("TTF Error: %s", TTF_GetError());
         return -1;
@@ -621,25 +626,27 @@ int main() {
 
 
         //Menu
-        SDL_Surface* TitleSurface = TTF_RenderText_Solid(font, "TETRIS", textColor);
+        SDL_Surface* TitleSurface = TTF_RenderText_Solid(bigfont, "TETRIS", textColor);
         SDL_Texture* TitleTexture = SDL_CreateTextureFromSurface(renderer, TitleSurface);
         int widthScore;
         int heightScore;
         TTF_SizeText(bigfont, "TETRIS", &widthScore, &heightScore);
-        SDL_Rect textRect = { 110, 300, widthScore, heightScore };  // Position und Größe des Textes
+        int buttonx = 100;
+        int buttony = 250;
+        SDL_Rect textRect = { 100, 175, widthScore, heightScore };  // Position und Größe des Textes
         SDL_RenderCopy(renderer, TitleTexture, NULL, &textRect);
         //229 80
-        if (mouseX >= 140 && mouseX < 370 && mouseY >= 450 && mouseY <= 530) {
+        if (mouseX >= buttonx && mouseX < buttonx + widthScore && mouseY >= buttony && mouseY <= buttony + heightScore) {
             //Play Button Hover
             hover = true;
             SDL_Color black = { 0, 0, 0 };
-            SDL_Surface* PlaySurface = TTF_RenderText_Solid(font, "PLAY", black);
+            SDL_Surface* PlaySurface = TTF_RenderText_Solid(bigfont, "PLAY", black);
             SDL_Texture* PlayTexture = SDL_CreateTextureFromSurface(renderer, PlaySurface);
             int widhtPlay;
             int heightPlay;
             TTF_SizeText(bigfont, "PLAY", &widhtPlay, &heightPlay);
-            SDL_Rect playRect = { 140, 450, widhtPlay, heightPlay };  // Position und Größe des Textes
-            SDL_Rect outlineRect = { 140, 450, 230, 80 };
+            SDL_Rect playRect = { 100, 250, widhtPlay, heightPlay };  // Position und Größe des Textes
+            SDL_Rect outlineRect = { 100, 250, 175, 60 };
             SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
             SDL_RenderFillRect(renderer, &outlineRect);
             SDL_RenderCopy(renderer, PlayTexture, NULL, &playRect);
@@ -652,7 +659,7 @@ int main() {
             int widhtPlay;
             int heightPlay;
             TTF_SizeText(bigfont, "PLAY", &widhtPlay, &heightPlay);
-            SDL_Rect playRect = { 140, 450, widhtPlay, heightPlay };  // Position und Größe des Textes
+            SDL_Rect playRect = { buttonx, buttony, widhtPlay, heightPlay };  // Position und Größe des Textes
             SDL_RenderCopy(renderer, PlayTexture, NULL, &playRect);
         }
 
@@ -775,6 +782,7 @@ int main() {
                         RemoveBlock(x, i);
                     }
                     score += 40;
+                    linesCleared++;
                     for (int y = i - 1; y >= 0; y--) {
                         for (int x = 0; x < 10; x++) {
                             LowerBlock(x, y);
@@ -790,29 +798,29 @@ int main() {
             SDL_UnlockMutex(fieldMutex);
         }
         //Rendern
-        for (int i = 0; i < 18; i++) {       //Y
+        for (int i = 0; i < 20; i++) {       //Y
             for (int j = 0; j < 10; j++) {   //X
                 int id = i * 10 + j;
                 SDL_LockMutex(fieldMutex);
                 if (field[id].block) {
-                    SDL_Rect baseRect = { j * 50 + 10, i * 50 + 25, 50, 50 };
+                    SDL_Rect baseRect = { j * blocksize + 10, i * blocksize + 25, blocksize, blocksize };
                     HSVColor hsv = field[id].color;
                     RGBAColor color = hsv_to_rgb(hsv);
                     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL_RenderFillRect(renderer, &baseRect);
-                    SDL_Rect leftRect = {j * 50 + 10, i * 50 + 25, 5, 50};
+                    SDL_Rect leftRect = {j * blocksize + 10, i * blocksize + 25, 5, blocksize};
                     hsv.v = hsv.v - 26;
                     hsv.s = hsv.s - 100;
                     color = hsv_to_rgb(hsv);
                     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL_RenderFillRect(renderer, &leftRect);
-                    SDL_Rect upRect = { j * 50 + 10, i * 50 + 25, 50, 5 };
+                    SDL_Rect upRect = { j * blocksize + 10, i * blocksize + 25, blocksize, 5 };
                     hsv.v = hsv.v + 50;
                     hsv.s = hsv.s - 79;
                     color = hsv_to_rgb(hsv);
                     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL_RenderFillRect(renderer, &upRect);
-                    SDL_Rect cornerRect = { j * 50 + 10, i * 50 + 25, 5, 5 };
+                    SDL_Rect cornerRect = { j * blocksize + 10, i * blocksize + 25, 5, 5 };
                     hsv = field[id].color;
                     hsv.v = hsv.v - 100;
                     color = hsv_to_rgb(hsv);
@@ -825,24 +833,24 @@ int main() {
         SDL_LockMutex(activefieldMutex);
         for (int i = 0; i < sizeof(activeField) / sizeof(activeField[0]); i++) {
             if (activeField[i].field.block) {
-                SDL_Rect baseRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 50 };
+                SDL_Rect baseRect = { activeField[i].x * blocksize + 10, activeField[i].y * blocksize + 25, blocksize, blocksize };
                 HSVColor hsv = activeField[i].field.color;
                 RGBAColor color = hsv_to_rgb(hsv);
                 SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                 SDL_RenderFillRect(renderer, &baseRect);
-                SDL_Rect leftRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 5, 50 };
+                SDL_Rect leftRect = { activeField[i].x * blocksize + 10, activeField[i].y * blocksize + 25, 5, blocksize };
                 hsv.v = hsv.v - 26;
                 hsv.s = hsv.s - 100;
                 color = hsv_to_rgb(hsv);
                 SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                 SDL_RenderFillRect(renderer, &leftRect);
-                SDL_Rect upRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 50, 5 };
+                SDL_Rect upRect = { activeField[i].x * blocksize + 10, activeField[i].y * blocksize + 25, blocksize, 5};
                 hsv.v = hsv.v + 50;
                 hsv.s = hsv.s - 79;
                 color = hsv_to_rgb(hsv);
                 SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                 SDL_RenderFillRect(renderer, &upRect);
-                SDL_Rect cornerRect = { activeField[i].x * 50 + 10, activeField[i].y * 50 + 25, 5, 5 };
+                SDL_Rect cornerRect = { activeField[i].x * blocksize + 10, activeField[i].y * blocksize + 25, 5, 5 };
                 hsv = activeField[i].field.color;
                 hsv.v = hsv.v - 100;
                 color = hsv_to_rgb(hsv);
@@ -863,14 +871,14 @@ int main() {
         int widthScore;
         int heightScore;
         TTF_SizeText(font, stringScore, &widthScore, &heightScore);
-        SDL_Rect textRect = { 75, 0, widthScore, heightScore };  // Position und Größe des Textes
+        SDL_Rect textRect = { 50, 0, widthScore, heightScore };  // Position und Größe des Textes
         SDL_RenderCopy(renderer, TextureScore, NULL, &textRect);
         SDL_Surface* textSurfaceTime = TTF_RenderText_Solid(font, stringTime, textColor);
         SDL_Texture* TextureTime = SDL_CreateTextureFromSurface(renderer, textSurfaceTime);
         int widthTime;
         int heightTime;
         TTF_SizeText(font, stringTime, &widthTime, &heightTime);
-        SDL_Rect timeRect = { 320, 0, widthTime, heightTime };
+        SDL_Rect timeRect = { 250, 0, widthTime, heightTime };
         SDL_RenderCopy(renderer, TextureTime, NULL, &timeRect);
 
         if (blockout && firstBlockout) {
