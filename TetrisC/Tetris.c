@@ -520,7 +520,12 @@ int main() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     TTF_Init();
     int blocksize = 40;
+#ifndef NDEBUG
     printf("Window size: %d|%d\n", 20 + blocksize * 10, blocksize * 18 + 25);
+#endif
+#ifdef DEBUG
+    MessageBox(NULL, ("TTF Error: %s", TTF_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
     SDL_Window* window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 20 + blocksize * 10, 25 + 20 * blocksize, NULL);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     char* basePath = SDL_GetBasePath();
@@ -531,15 +536,28 @@ int main() {
     snprintf(fullPath, sizeof(fullPath), "%s%s", basePath, fontFileName);
     TTF_Font* font = TTF_OpenFont(fullPath, 24);  // Pfad zur Schriftart, Schriftgröße
     TTF_Font* bigfont = TTF_OpenFont(fullPath, 60);
-    TTF_Font* verybigfont = TTF_OpenFont(fullPath, 80);
+    TTF_Font* verybigfont = TTF_OpenFont(fullPath, 71);
     if (font == NULL || bigfont == NULL || verybigfont == NULL) {
+#ifndef NDEBUG
         printf("TTF Error: %s", TTF_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("TTF Error: %s", TTF_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
+
+
         return -1;
     }
 
     //Sound setup
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+#ifndef NDEBUG
         printf("Fehler bei Mix_OpenAudio: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
+
         SDL_Quit();
         return -1;
     }
@@ -547,7 +565,12 @@ int main() {
     snprintf(backgroundPath, sizeof(backgroundPath), "%s%s", basePath, "Audio\\background1.mp3");
     Mix_Music* backgroundMusic = Mix_LoadMUS(backgroundPath);
     if (!backgroundMusic) {
+#ifndef NDEBUG
         printf("Fehler beim Laden der Hintergrundmusik: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
         Mix_CloseAudio();
         SDL_Quit();
         return -1;
@@ -556,7 +579,13 @@ int main() {
     snprintf(gameoverPath, sizeof(gameoverPath), "%s%s", basePath, "Audio\\gameover.mp3");
     Mix_Music* gameoverMusic = Mix_LoadMUS(gameoverPath);
     if (!gameoverMusic) {
+#ifndef NDEBUG
         printf("Fehler beim Laden der GameOvermusik: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
+
         Mix_CloseAudio();
         SDL_Quit();
         return -1;
@@ -565,7 +594,13 @@ int main() {
     snprintf(sfxPath, sizeof(sfxPath), "%s%s", basePath, "Audio\\sfx1.mp3");
     Mix_Chunk* soundEffect = Mix_LoadWAV(sfxPath);
     if (!soundEffect) {
+#ifndef NDEBUG
         printf("Fehler beim Laden des Soundeffekts: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
+
         Mix_FreeMusic(backgroundMusic);
         Mix_CloseAudio();
         SDL_Quit();
@@ -610,11 +645,14 @@ int main() {
             }
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (Mix_PlayChannel(-1, soundEffect, 0) == -1) {
+#ifndef NDEBUG
                     printf("Fehler beim Abspielen des Soundeffekts: %s\n", Mix_GetError());
+#endif
                 }
                 if (event.button.button == SDL_BUTTON_LEFT && hover) {
-                    printf("Left mouse button clicked at (%d, %d)\n",
-                        event.button.x, event.button.y);
+#ifndef NDEBUG
+                    printf("Left mouse button clicked at (%d, %d)\n",event.button.x, event.button.y);
+#endif
                     running = true;
                     menurunning = false;
                 }
@@ -707,9 +745,14 @@ int main() {
 
     //Musik starten
     if (Mix_PlayMusic(backgroundMusic, -1) == -1) {
+#ifndef NDEBUG
         printf("Fehler beim Abspielen der Hintergrundmusik: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
     }
-
+    SDL_ShowCursor(SDL_DISABLE);
     QueryPerformanceCounter(&t1);
 
     while (running) {
@@ -734,15 +777,21 @@ int main() {
                     break;
                 }
                 if (event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) {
+#ifndef NDEBUG
                     printf("Down!\n");
+#endif
                     MoveActive(0);
                 }
                 if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) {
+#ifndef NDEBUG
                     printf("Left!\n");
+#endif
                     MoveActive(1);
                 }
                 if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_d) {
+#ifndef NDEBUG
                     printf("Right!");
+#endif
                     MoveActive(2);
                 }
                 if ((event.key.keysym.sym == SDLK_r || event.key.keysym.sym == SDLK_SPACE) && activefieldbool) {
@@ -776,7 +825,12 @@ int main() {
                 if (full) {
                     combo++;
                     if (Mix_PlayChannel(-1, soundEffect, 0) == -1) {
+#ifndef NDEBUG
                         printf("Fehler beim Abspielen des Soundeffekts: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+                        MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
                     }
                     for (int x = 0; x < 10; x++) {
                         RemoveBlock(x, i);
@@ -887,8 +941,14 @@ int main() {
             activefieldbool = false;
             Mix_HaltMusic();
             firstBlockout = false;
+            SDL_ShowCursor(SDL_ENABLE);
             if (Mix_PlayMusic(gameoverMusic, -1) == -1) {
+#ifndef NDEBUG
                 printf("Fehler beim Abspielen der Gameovermusik: %s\n", Mix_GetError());
+#endif
+#ifdef NDEBUG
+                MessageBox(NULL, ("Mix Error: %s", Mix_GetError()), "TetrisC ERROR", MB_OK | MB_ICONERROR);
+#endif
             }
         }
         if (blockout) {
