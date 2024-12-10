@@ -364,7 +364,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             }
         }
         else {
-            switch(3) // 0 - 6rand() % 7
+            switch(rand() % 7) // 0 - 6
             {
             case 0: // I
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(5, 2) && !IsBlock(5, 3)) {
