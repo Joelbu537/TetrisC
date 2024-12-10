@@ -157,7 +157,7 @@ void MoveActive(int direction) { //0 down 1 left 2 right
         case 0:
             SDL_LockMutex(fieldMutex);
             for (int i = 0; i < 4; i++) {
-                if (activeField[i].y + 1 >= 18 || IsBlock(activeField[i].x, activeField[i].y + 1)) possible = false;
+                if (activeField[i].y + 1 >= 20 || IsBlock(activeField[i].x, activeField[i].y + 1)) possible = false;
             }
             if (possible){
                 for (int i = 0; i < 4; i++) {
@@ -223,23 +223,57 @@ void RotateActive() {
         break;
     case 1: //Block, do nothing
         break;
-    case 2://l reverse
+    case 2://L reverse
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y - 1) && !IsBlock(activeField[2].x - 1, activeField[2].y + 1) && !IsBlock(activeField[3].x - 2, activeField[3].y)) {
+                activeField[0].x += 1; activeField[0].y -= 1;
+                activeField[2].x -= 1; activeField[2].y += 1;
+                activeField[3].x -= 2;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y + 1) && !IsBlock(activeField[2].x - 1, activeField[2].y - 1) && !IsBlock(activeField[3].x + 2, activeField[3].y)) {
+                activeField[0].x += 1; activeField[0].y += 1;
+                activeField[2].x -= 1; activeField[2].y -= 1;
+                activeField[3].y -= 2;
+                rotationState = 2;
+            }
+            break;
+        case 2:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y - 1) && !IsBlock(activeField[2].x + 1, activeField[2].y - 1) && !IsBlock(activeField[3].x + 2, activeField[3].y)) {
+                activeField[0].x -= 1; activeField[0].y += 1;
+                activeField[2].x += 1; activeField[2].y -= 1;
+                activeField[3].x += 2;
+                rotationState = 3;
+            }
+            break;
+        case 3:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y -1) && !IsBlock(activeField[2].x + 1, activeField[2].y + 1) && !IsBlock(activeField[3].x, activeField[3].y + 2)) {
+                activeField[0].x -= 1; activeField[0].y -= 1;
+                activeField[2].x += 1; activeField[2].y += 1;
+                activeField[3].y += 2;
+                rotationState = 0;
+            }
+            break;
+        }
         break;
     case 3://L
         switch (rotationState) {
         case 0:
             if (!IsBlock(activeField[0].x + 1, activeField[0].y - 1) && !IsBlock(activeField[2].x, activeField[2].y + 1) && !IsBlock(activeField[3].x + 1, activeField[3].y)) {
                 activeField[0].x += 1; activeField[0].y -= 1;
-                activeField[2].y += 1;
-                activeField[3].x += 1;
+                activeField[2].x -= 1; activeField[2].y += 1;
+                activeField[3].x += 2;
                 rotationState = 1;
             }
             break;
         case 1:
             if (!IsBlock(activeField[0].x - 1, activeField[0].y + 1) && !IsBlock(activeField[2].x, activeField[2].y - 1) && !IsBlock(activeField[3].x + 1, activeField[3].y - 2)) {
                 activeField[0].x -= 1; activeField[0].y += 1;
-                activeField[2].y -= 1;
-                activeField[3].x += 1; activeField[3].y -= 2;
+                activeField[2].x += 1;  activeField[2].y -= 1;
+                activeField[3].y -= 2;
                 rotationState = 2;
             }
             break;
@@ -330,7 +364,7 @@ DWORD WINAPI DropBlocks(LPVOID lpParam) {
             }
         }
         else {
-            switch(rand() % 7) // 0 - 6
+            switch(3) // 0 - 6rand() % 7
             {
             case 0: // I
                 if (!IsBlock(5, 0) && !IsBlock(5, 1) && !IsBlock(5, 2) && !IsBlock(5, 3)) {
