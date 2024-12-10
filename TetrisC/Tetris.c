@@ -37,13 +37,14 @@ SDL_mutex* fieldMutex;
 SDL_mutex* timeMutex;
 SDL_mutex* activefieldMutex;
 volatile bool activefieldbool = false;
-volatile int stepDelay = 500;
+volatile int stepDelay = 2000;
 volatile bool blockout = false;
 bool firstBlockout = true;
 volatile int blockType;
 volatile int rotationState;
 volatile int blocksDropped = 0;
 volatile int linesCleared = 0;
+int difficulty = 3;
 
 HSVColor cyan = { 115, 255, 204 };
 HSVColor yellow = { 40, 255, 204 };
@@ -296,8 +297,39 @@ void RotateActive() {
         }
         break;
     case 4://Thing
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[0].x + 1, activeField[0].y) && !IsBlock(activeField[3].x + 1, activeField[3].y - 2)) {
+                activeField[0].x += 1;
+                activeField[3].x += 1; activeField[3].y -= 2;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x - 1, activeField[0].y) && !IsBlock(activeField[3].x - 1, activeField[3].y + 2)) {
+                activeField[0].x -= 1;
+                activeField[3].x -= 1; activeField[3].y += 2;
+                rotationState = 0;
+            }
+            break;
+        }
+
         break;
     case 5://Thing reverse
+        switch (rotationState) {
+        case 0:
+            if (!IsBlock(activeField[0].x - 2, activeField[0].y + 2)) {
+                activeField[0].x -= 2; activeField[0].y += 2;
+                rotationState = 1;
+            }
+            break;
+        case 1:
+            if (!IsBlock(activeField[0].x + 2, activeField[0].y - 2)) {
+                activeField[0].x += 2; activeField[0].y -= 2;
+                rotationState = 0;
+            }
+            break;
+        }
         break;
     case 6://T
         switch (rotationState) {
@@ -833,6 +865,12 @@ int main() {
                 }
             }
         }
+        if (2500 - score * difficulty >= 250) {
+            stepDelay = 2500 - score * difficulty;
+        }
+        else {
+            stepDelay = 250;
+        }
 
         /*
         // Input handling
@@ -849,7 +887,7 @@ int main() {
         if (!activefieldbool) {
             SDL_LockMutex(fieldMutex);
             int combo = 0;
-            for (int i = 0; i < 18; i++) {
+            for (int i = 0; i < 20; i++) {
                 bool full = true;
                 for (int x = 0; x < 10; x++) {
                     if (!IsBlock(x, i)) {
