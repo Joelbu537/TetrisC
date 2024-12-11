@@ -313,24 +313,24 @@ void RotateActive() {
             }
             break;
         }
-
         break;
     case 5://Thing reverse
         switch (rotationState) {
         case 0:
-            if (!IsBlock(activeField[0].x - 2, activeField[0].y + 2)) {
-                activeField[0].x -= 2; activeField[0].y += 2;
+            if (!IsBlock(activeField[0].x, activeField[0].y + 2) && !IsBlock(activeField[3].x + 2, activeField[3].y)) {
+                activeField[0].y += 2;
+                activeField[3].x += 2;
                 rotationState = 1;
             }
             break;
         case 1:
-            if (!IsBlock(activeField[0].x + 2, activeField[0].y - 2)) {
-                activeField[0].x += 2; activeField[0].y -= 2;
+            if (!IsBlock(activeField[0].x, activeField[0].y - 2) && !IsBlock(activeField[3].x - 2, activeField[3].y)) {
+                activeField[0].y -= 2;
+                activeField[3].x -= 2;
                 rotationState = 0;
             }
             break;
         }
-        break;
     case 6://T
         switch (rotationState) {
         case 0:
